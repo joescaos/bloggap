@@ -5,6 +5,7 @@ import com.joescaos.my_blog.service.CategoryService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -47,5 +48,13 @@ public class CategoryController {
   public ResponseEntity<CategoryDTO> updateCategory(
       @PathVariable long id, @RequestBody CategoryDTO categoryDTO) {
     return ResponseEntity.ok(categoryService.updateCategory(categoryDTO, id));
+  }
+
+  @PreAuthorize("hasRole('ADMIN')")
+  @DeleteMapping("{id}")
+  public ResponseEntity<String> deleteCategory(
+          @PathVariable long id) {
+    categoryService.deleteCategory(id);
+    return ResponseEntity.ok("Category deleted successfully");
   }
 }
