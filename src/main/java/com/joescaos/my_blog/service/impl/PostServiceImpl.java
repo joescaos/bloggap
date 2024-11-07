@@ -2,8 +2,10 @@ package com.joescaos.my_blog.service.impl;
 
 import com.joescaos.my_blog.dto.PostDto;
 import com.joescaos.my_blog.dto.PostListResponseDTO;
+import com.joescaos.my_blog.entity.Category;
 import com.joescaos.my_blog.entity.Post;
 import com.joescaos.my_blog.exceptions.ResourceNotFoundException;
+import com.joescaos.my_blog.repository.CategoryRepository;
 import com.joescaos.my_blog.repository.PostRepository;
 import com.joescaos.my_blog.service.PostService;
 import org.modelmapper.ModelMapper;
@@ -13,6 +15,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class PostServiceImpl implements PostService {
 
@@ -20,20 +24,35 @@ public class PostServiceImpl implements PostService {
 
   private final ModelMapper mapper;
 
-  public PostServiceImpl(PostRepository postRepository, ModelMapper mapper) {
+  private final CategoryRepository categoryRepository;
+
+  public PostServiceImpl(
+      PostRepository postRepository, ModelMapper mapper, CategoryRepository categoryRepository) {
     this.postRepository = postRepository;
     this.mapper = mapper;
+    this.categoryRepository = categoryRepository;
   }
 
   @Override
   public PostDto createPost(PostDto postDto) {
-    return buildPostDto(postRepository.save(buildPost(postDto)));
+    Category category =
+        categoryRepository
+            .findById(postDto.getCategoryId())
+            .orElseThrow(
+                () -> new ResourceNotFoundException("category", "id", postDto.getCategoryId()));
+
+    Post post = buildPost(postDto);
+    post.setCategory(category);
+    Post postSaved = postRepository.save(post);
+
+    return buildPostDto(postSaved);
   }
 
   @Override
   public PostListResponseDTO getAllPosts(int pageNo, int pageSize, String sortBy, String orderBy) {
 
-    Sort sort = orderBy.equalsIgnoreCase(Sort.Direction.ASC.name())
+    Sort sort =
+        orderBy.equalsIgnoreCase(Sort.Direction.ASC.name())
             ? Sort.by(Sort.Direction.ASC, sortBy)
             : Sort.by(Sort.Direction.DESC, sortBy);
 
@@ -57,15 +76,34 @@ public class PostServiceImpl implements PostService {
             .findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Post", "id", postDto.getId()));
 
+    Category category =
+        categoryRepository
+            .findById(postDto.getCategoryId())
+            .orElseThrow(
+                () -> new ResourceNotFoundException("category", "id", postDto.getCategoryId()));
+
     postDB.setTitle(postDto.getTitle());
     postDB.setDescription(postDto.getDescription());
     postDB.setContent(postDto.getContent());
+    postDB.setCategory(category);
     return buildPostDto(postRepository.save(postDB));
   }
 
   @Override
   public void deletePost(Long id) {
     postRepository.deleteById(id);
+  }
+
+  @Override
+  public List<PostDto> getPostsByCategory(Long categoryId) {
+
+    Category category =
+        categoryRepository
+            .findById(categoryId)
+            .orElseThrow(() -> new ResourceNotFoundException("category", "id", categoryId));
+
+    List<Post> postList = postRepository.findByCategory(categoryId);
+    return postList.stream().map(this::buildPostDto).toList();
   }
 
   private Post buildPost(PostDto postDto) {
