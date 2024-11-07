@@ -102,7 +102,7 @@ public class PostServiceImpl implements PostService {
             .findById(categoryId)
             .orElseThrow(() -> new ResourceNotFoundException("category", "id", categoryId));
 
-    List<Post> postList = postRepository.findByCategory(categoryId);
+    List<Post> postList = postRepository.findByCategoryId(categoryId);
     return postList.stream().map(this::buildPostDto).toList();
   }
 
